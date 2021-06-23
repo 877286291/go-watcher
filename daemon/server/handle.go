@@ -7,6 +7,7 @@ import (
 	"go-watcher/daemon/utils"
 	"io/ioutil"
 	"net"
+	"sort"
 	"sync"
 )
 
@@ -203,5 +204,34 @@ func (r TcpRequest) restartProcess(conn *net.TCPConn) {
 	}
 }
 func (r TcpRequest) getProcessStatus(conn *net.TCPConn) {
-
+	if r.ProcessName == "all" {
+		keys := make([]string, 0, len(ProcessRegister))
+		for k := range ProcessRegister {
+			keys = append(keys, k)
+		}
+		sort.Slice(keys, func(i, j int) bool {
+			return keys[i] < keys[j]
+		})
+		for _, key := range keys {
+			status := ProcessRegister[key].getProcessStatus()
+			_, err := conn.Write([]byte(status))
+			if err != nil {
+				log.Errorln(err)
+			}
+		}
+		if err := conn.CloseWrite(); err != nil {
+			log.Errorln(err)
+		}
+		return
+	}
+	if processStatus, ok := ProcessRegister[r.ProcessName]; ok {
+		status := processStatus.getProcessStatus()
+		if err := utils.WriteMsgToConn(conn, status); err != nil {
+			log.Errorln(err)
+		}
+		return
+	}
+	if err := utils.WriteMsgToConn(conn, fmt.Sprintf("no such process:%s\n", r.ProcessName)); err != nil {
+		log.Errorln(err)
+	}
 }

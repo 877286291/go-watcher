@@ -103,7 +103,9 @@ func (p Process) restartProcess() error {
 	}
 	return nil
 }
-func (p Process) getProcessStatus() error {
-
-	return nil
+func (p Process) getProcessStatus() string {
+	if p.Status == "Running" {
+		return fmt.Sprintf("%s\t%s\t%d\t%s\n", p.ProcessName, p.Status, p.Pid, time.Now().Sub(p.StartTime))
+	}
+	return fmt.Sprintf("%s\t%s\t\n", p.ProcessName, p.Status)
 }
