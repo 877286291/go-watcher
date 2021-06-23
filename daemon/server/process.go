@@ -11,19 +11,20 @@ import (
 var ProcessRegister map[string]*Process
 
 type Process struct {
-	ProcessName   string   `json:"process_name"`
-	HomeDirectory string   `json:"-"`
-	Command       string   `json:"command"`
-	Arguments     string   `json:"arguments"`
-	AutoStart     bool     `json:"-"`
-	AutoRestart   bool     `json:"-"`
-	Retries       int      `json:"retries"`
-	StartSecs     int      `json:"-"`
-	Environment   []string `json:"-"`
-	Status        string   `json:"status"`
-	Stop          bool     `json:"-"`
-	Pid           int      `json:"pid,omitempty"`
-	FatalCount    int      `json:"fatal_count"`
+	ProcessName   string    `json:"process_name"`
+	HomeDirectory string    `json:"-"`
+	Command       string    `json:"command"`
+	Arguments     string    `json:"arguments"`
+	AutoStart     bool      `json:"-"`
+	AutoRestart   bool      `json:"-"`
+	Retries       int       `json:"retries"`
+	StartSecs     int       `json:"-"`
+	Environment   []string  `json:"-"`
+	Status        string    `json:"status"`
+	Stop          bool      `json:"-"`
+	Pid           int       `json:"pid,omitempty"`
+	StartTime     time.Time `json:"start_time"`
+	FatalCount    int       `json:"fatal_count"`
 }
 
 func init() {
