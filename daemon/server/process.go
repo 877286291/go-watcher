@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"go-watcher/daemon/utils"
 	"os"
 	"time"
@@ -30,11 +31,12 @@ type Process struct {
 func init() {
 	ProcessRegister = make(map[string]*Process)
 }
-func (p Process) wait4(process *os.Process) {
+func (p *Process) wait4(process *os.Process) {
 	p.Pid = process.Pid
 	p.Status = "Running"
 	tmp := p.FatalCount
 	p.FatalCount = 0
+	p.StartTime = time.Now()
 	_, _ = process.Wait()
 	p.FatalCount = tmp
 	p.Pid = 0
@@ -54,7 +56,7 @@ func (p Process) wait4(process *os.Process) {
 	// 失败重置
 	p.FatalCount = 0
 }
-func (p Process) startProcess() error {
+func (p *Process) startProcess() error {
 	procAttr := &os.ProcAttr{
 		Dir:   p.HomeDirectory,
 		Env:   p.Environment,
@@ -81,18 +83,19 @@ func (p Process) startProcess() error {
 		}
 	}
 }
-func (p Process) stopProcess() error {
+func (p *Process) stopProcess() error {
 	if p.Pid == 0 {
 		return errors.New("process is not running")
 	}
 	p.Stop = true
 	if err := utils.KillProcess(p.Pid); err != nil {
+		log.Error(err)
 		p.Stop = false
 		return err
 	}
 	return nil
 }
-func (p Process) restartProcess() error {
+func (p *Process) restartProcess() error {
 	if p.Pid != 0 {
 		if err := p.stopProcess(); err != nil {
 			return err
@@ -103,9 +106,9 @@ func (p Process) restartProcess() error {
 	}
 	return nil
 }
-func (p Process) getProcessStatus() string {
+func (p *Process) getProcessStatus() string {
 	if p.Status == "Running" {
-		return fmt.Sprintf("%s\t%s\t%d\t%s\n", p.ProcessName, p.Status, p.Pid, time.Now().Sub(p.StartTime))
+		return fmt.Sprintf("%-20s %-10s %-10d %-10s\n", p.ProcessName, p.Status, p.Pid, time.Now().Sub(p.StartTime))
 	}
-	return fmt.Sprintf("%s\t%s\t\n", p.ProcessName, p.Status)
+	return fmt.Sprintf("%-20s %-10s\n", p.ProcessName, p.Status)
 }

@@ -58,14 +58,14 @@ func (r TcpRequest) startProcess(conn *net.TCPConn) {
 					if err := process.startProcess(); err != nil {
 						startStatus = "failed"
 					}
-					_, err := conn.Write([]byte(fmt.Sprintf("%s process start %s\n", process.ProcessName, startStatus)))
+					_, err := conn.Write([]byte(fmt.Sprintf("process %s start %s\n", process.ProcessName, startStatus)))
 					if err != nil {
 						log.Error(err)
 					}
 					return
 				}
 				log.Infof("%s process already started\n", process.ProcessName)
-				_, err := conn.Write([]byte(fmt.Sprintf("%s process already started\n", process.ProcessName)))
+				_, err := conn.Write([]byte(fmt.Sprintf("process %s already started\n", process.ProcessName)))
 				if err != nil {
 					log.Error(err)
 				}
@@ -81,7 +81,7 @@ func (r TcpRequest) startProcess(conn *net.TCPConn) {
 		switch p.Status {
 		case "Running":
 			log.Infof("%s already started", p.ProcessName)
-			if err := utils.WriteMsgToConn(conn, fmt.Sprintf("%s already started\n", p.ProcessName)); err != nil {
+			if err := utils.WriteMsgToConn(conn, fmt.Sprintf("process %s already started\n", p.ProcessName)); err != nil {
 				log.Error(err)
 			}
 		case "Stopped", "Fatal":
@@ -89,7 +89,7 @@ func (r TcpRequest) startProcess(conn *net.TCPConn) {
 			if err := p.startProcess(); err != nil {
 				startStatus = "failed"
 			}
-			if err := utils.WriteMsgToConn(conn, fmt.Sprintf("%s process start %s\n", p.ProcessName, startStatus)); err != nil {
+			if err := utils.WriteMsgToConn(conn, fmt.Sprintf("process %s start %s\n", p.ProcessName, startStatus)); err != nil {
 				log.Errorln(err)
 			}
 		}
@@ -109,8 +109,8 @@ func (r TcpRequest) startProcess(conn *net.TCPConn) {
 				if err := process.startProcess(); err != nil {
 					startStatus = "failed"
 				}
-				log.Infof("%s process start %s\n", r.ProcessName, startStatus)
-				_, err := conn.Write([]byte(fmt.Sprintf("%s process start %s\n", r.ProcessName, startStatus)))
+				log.Infof("process %s start %s\n", r.ProcessName, startStatus)
+				_, err := conn.Write([]byte(fmt.Sprintf("process %s start %s\n", r.ProcessName, startStatus)))
 				if err != nil {
 					log.Errorln(err)
 				}
@@ -129,13 +129,19 @@ func (r TcpRequest) stopProcess(conn *net.TCPConn) {
 			wg.Add(1)
 			go func(process *Process) {
 				defer wg.Done()
+				if process.Pid == 0 {
+					_, err := conn.Write([]byte(fmt.Sprintf("process %s is not running\n", process.ProcessName)))
+					if err != nil {
+						log.Errorln(err)
+					}
+				}
 				killStatus := "success"
 				if err := process.stopProcess(); err != nil {
 					killStatus = "failed"
 					log.Error(err)
 				}
 				log.Infof("%s process stop %s\n", process.ProcessName, killStatus)
-				_, err := conn.Write([]byte(fmt.Sprintf("%s process stop %s\n", process.ProcessName, killStatus)))
+				_, err := conn.Write([]byte(fmt.Sprintf("process %s stop %s\n", process.ProcessName, killStatus)))
 				if err != nil {
 					log.Errorln(err)
 				}
@@ -150,22 +156,22 @@ func (r TcpRequest) stopProcess(conn *net.TCPConn) {
 	if p, ok := ProcessRegister[r.ProcessName]; ok {
 		if err := p.stopProcess(); err != nil {
 			if p.Status == "Stopped" {
-				if err := utils.WriteMsgToConn(conn, fmt.Sprintf("%s process not running\n", r.ProcessName)); err != nil {
+				if err := utils.WriteMsgToConn(conn, fmt.Sprintf("process %s not running\n", r.ProcessName)); err != nil {
 					log.Errorln(err)
 				}
 				return
 			}
-			if err := utils.WriteMsgToConn(conn, fmt.Sprintf("%s process stop failed\n", r.ProcessName)); err != nil {
+			if err := utils.WriteMsgToConn(conn, fmt.Sprintf("process %s stop failed\n", r.ProcessName)); err != nil {
 				log.Errorln(err)
 			}
 			return
 		}
-		if err := utils.WriteMsgToConn(conn, fmt.Sprintf("%s process stop success\n", r.ProcessName)); err != nil {
+		if err := utils.WriteMsgToConn(conn, fmt.Sprintf("process %s stop success\n", r.ProcessName)); err != nil {
 			log.Errorln(err)
 		}
 		return
 	}
-	if err := utils.WriteMsgToConn(conn, fmt.Sprintf("no such process:%s\n", r.ProcessName)); err != nil {
+	if err := utils.WriteMsgToConn(conn, fmt.Sprintf("no such process %s\n", r.ProcessName)); err != nil {
 		log.Errorln(err)
 	}
 }
@@ -180,7 +186,7 @@ func (r TcpRequest) restartProcess(conn *net.TCPConn) {
 				if err := process.restartProcess(); err != nil {
 					status = "failed"
 				}
-				_, err := conn.Write([]byte(fmt.Sprintf("%s process stop %s\n", r.ProcessName, status)))
+				_, err := conn.Write([]byte(fmt.Sprintf("process %s stop %s\n", r.ProcessName, status)))
 				if err != nil {
 					log.Errorln(err)
 				}
@@ -198,12 +204,13 @@ func (r TcpRequest) restartProcess(conn *net.TCPConn) {
 			status = "failed"
 			log.Error(err)
 		}
-		if err := utils.WriteMsgToConn(conn, fmt.Sprintf("%s process restart %s", r.ProcessName, status)); err != nil {
+		if err := utils.WriteMsgToConn(conn, fmt.Sprintf("process %s restart %s", r.ProcessName, status)); err != nil {
 			log.Error(err)
 		}
 	}
 }
 func (r TcpRequest) getProcessStatus(conn *net.TCPConn) {
+	log.Info("getProcessStatus request")
 	if r.ProcessName == "all" {
 		keys := make([]string, 0, len(ProcessRegister))
 		for k := range ProcessRegister {
@@ -231,7 +238,7 @@ func (r TcpRequest) getProcessStatus(conn *net.TCPConn) {
 		}
 		return
 	}
-	if err := utils.WriteMsgToConn(conn, fmt.Sprintf("no such process:%s\n", r.ProcessName)); err != nil {
+	if err := utils.WriteMsgToConn(conn, fmt.Sprintf("no such process %s\n", r.ProcessName)); err != nil {
 		log.Errorln(err)
 	}
 }

@@ -18,8 +18,9 @@ func init() {
 }
 func NewServerConfig() *DaemonServerConfig {
 	return &DaemonServerConfig{
-		ServerPort: cfg.Section("go-watcher").Key("server_port").MustInt(2021),
-		LogPath:    cfg.Section("go-watcher").Key("log_path").MustString("tmp"),
+		ServerPort:  cfg.Section("go-watcher").Key("server_port").MustInt(2021),
+		LogPath:     cfg.Section("go-watcher").Key("log_path").MustString("tmp"),
+		IncludePath: cfg.Section("include").Key("files").String(),
 	}
 }
 func DefaultServerConfig() *DaemonServerConfig {
